@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Product CRUD with Promises</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .error { color: red; }
+        .success { color: green; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        button { margin: 5px; }
+    </style>
+</head>
+<body>
+<h1>Product Management</h1>
+
+<!-- Form for creating/updating products -->
+<div>
+    <h2>Add/Edit Product</h2>
+    <input type="hidden" id="productId">
+    <label>Name: </label><input type="text" id="productName" placeholder="Enter product name"><br><br>
+    <label>Price: </label><input type="number" id="productPrice" placeholder="Enter price" step="0.01"><br><br>
+    <button onclick="saveProduct()">Save Product</button>
+    <button onclick="clearForm()">Clear Form</button>
+    <p id="formMessage" class="error"></p>
+</div>
+
+<!-- Product list -->
+<h2>Products</h2>
+<table id="productTable">
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Price</th>
+        <th>Actions</th>
+    </tr>
+    </thead>
+    <tbody id="productList"></tbody>
+</table>
+
+<script>
+    const API_URL = '/api/products';
+
+    // Fetch and display all products
+    function loadProducts() {
+        fetch(API_URL)
+            .then(response => {
+                if (!response.ok) {
+                    if (response.status === 204) return [];
+                    throw new Error('Failed to fetch products');
+                }
+                return response.json();
+            })
+            .then(products => {
+                const tbody = document.getElementById('productList');
+                tbody.innerHTML = '';
+                products.forEach(product => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${product.id}</td>
+                        <td>${product.name}</td>
+                        <td>${product.price}</td>
+                        <td>
+                            <button onclick="editProduct(${product.id})">Edit</button>
+                            <button onclick="deleteProduct(${product.id})">Delete</button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            })
+            .catch(error => {
+                showMessage('Error loading products: ' + error.message, false);
+            });
+    }
+
+    // Save or update a product
+    function saveProduct() {
+        const id = document.getElementById('productId').value;
+        const name = document.getElementById('productName').value;
+        const price = document.getElementById('productPrice').value;
+        if (!name || !price || price <= 0) {
+            showMessage('Please enter a valid name and price', false);
+            return;
+        }
+
+        const method = id ? 'PUT' : 'POST';
+        const url = id ? `${API_URL}/${id}` : API_URL;
+        fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, price: parseFloat(price) })
+        })
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to save product');
+                return response.json();
+            })
+            .then(() => {
+                showMessage('Product saved successfully', true);
+                clearForm();
+                loadProducts();
+            })
+            .catch(error => {
+                showMessage('Error saving product: ' + error.message, false);
+            });
+    }
+
+    // Load product for editing
+    function editProduct(id) {
+        fetch(`${API_URL}/${id}`)
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to fetch product');
+                return response.json();
+            })
+            .then(product => {
+                document.getElementById('productId').value = product.id;
+                document.getElementById('productName').value = product.name;
+                document.getElementById('productPrice').value = product.price;
+                showMessage('Editing product ID: ' + product.id, true);
+            })
+            .catch(error => {
+                showMessage('Error loading product: ' + error.message, false);
+            });
+    }
+
+    // Delete a product
+    function deleteProduct(id) {
+        if (!confirm('Are you sure you want to delete this product?')) return;
+        fetch(`${API_URL}/${id}`, { method: 'DELETE' })
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to delete product');
+                showMessage('Product deleted successfully', true);
+                loadProducts();
+            })
+            .catch(error => {
+                showMessage('Error deleting product: ' + error.message, false);
+            });
+    }
+
+    // Clear form
+    function clearForm() {
+        document.getElementById('productId').value = '';
+        document.getElementById('productName').value = '';
+        document.getElementById('productPrice').value = '';
+        document.getElementById('formMessage').textContent = '';
+    }
+
+    // Show success/error message
+    function showMessage(message, isSuccess) {
+        const messageElement = document.getElementById('formMessage');
+        messageElement.textContent = message;
+        messageElement.className = isSuccess ? 'success' : 'error';
+    }
+
+    // Load products on page load
+    window.onload = loadProducts;
+</script>
+</body>
+</html>

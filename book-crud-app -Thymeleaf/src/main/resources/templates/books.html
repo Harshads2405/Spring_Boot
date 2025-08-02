@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head(title='Books')}"></head>
+<body>
+<div th:replace="~{layout :: body(content=~{::main})}"></div>
+<main>
+    <h2>Books</h2>
+    <a th:href="@{/books/new}" class="btn btn-primary mb-3">Add New Book</a>
+    <div th:if="${error}" class="alert alert-danger">
+        <span th:text="${error}"></span>
+    </div>
+    <div th:each="book : ${books}" class="card">
+        <h3 th:text="${book.title}"></h3>
+        <p>ISBN: <span th:text="${book.isbn}"></span></p>
+        <p>Price: $<span th:text="${book.price}"></span></p>
+        <p>Publication Date: <span th:text="${#temporals.format(book.publicationDate, 'yyyy-MM-dd')}"></span></p>
+        <p>Author: <span th:text="${book.author.name}"></span></p>
+        <p>Total Books by Author: <span th:text="${authorCounts[book.author.id]}"></span></p>
+        <div>
+            <a th:href="@{/books/edit/{id}(id=${book.id})}" class="btn btn-primary">Edit</a>
+            <form th:action="@{/books/delete/{id}(id=${book.id})}" method="post" style="display:inline;">
+                <button type="submit" class="btn btn-danger">Delete</button>
+            </form>
+        </div>
+    </div>
+</main>
+</body>
+</html>

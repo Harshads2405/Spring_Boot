@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${title} + ' - Book CRUD App'">Book CRUD App</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+<nav class="navbar">
+    <div class="container">
+        <a class="navbar-brand" href="/">Book CRUD App</a>
+        <div th:if="${session.token}">
+            <a href="/books" class="nav-link">Books</a>
+            <a href="/logout" class="nav-link">Logout</a>
+        </div>
+        <div th:unless="${session.token}">
+            <a href="/login" class="nav-link">Login</a>
+        </div>
+    </div>
+</nav>
+<div class="container">
+    <div th:replace="${content}"></div>
+</div>
+</body>
+</html>

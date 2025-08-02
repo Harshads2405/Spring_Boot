@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Management</title>
+    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/axios@0.27.2/dist/axios.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+<div id="root"></div>
+<script type="text/babel">
+    function BookApp() {
+        const [books, setBooks] = React.useState([]);
+        const [form, setForm] = React.useState({ title: '', isbn: '', price: '', publicationDate: '', authorId: '' });
+        const [editId, setEditId] = React.useState(null);
+        const [isModalOpen, setIsModalOpen] = React.useState(false);
+        const [error, setError] = React.useState(null);
+
+        React.useEffect(() => {
+            fetchBooks();
+        }, []);
+
+        const fetchBooks = async () => {
+            try {
+                const response = await axios.get('http://localhost:8080/api/books');
+                console.log('Books fetched:', response.data); // Debug log
+                setBooks(response.data);
+                setError(null);
+            } catch (err) {
+                console.error('Fetch error:', err); // Debug log
+                setError('Failed to fetch books: ' + (err.response?.statusText || err.message));
+            }
+        };
+
+        const handleSubmit = async (e) => {
+            e.preventDefault();
+            const bookData = {
+                ...form,
+                price: parseFloat(form.price),
+                publicationDate: form.publicationDate,
+                author: { id: parseInt(form.authorId) }
+            };
+            try {
+                if (editId) {
+                    await axios.put(`http://localhost:8080/api/books/${editId}`, bookData);
+                } else {
+                    await axios.post('http://localhost:8080/api/books', bookData);
+                }
+                fetchBooks();
+                setForm({ title: '', isbn: '', price: '', publicationDate: '', authorId: '' });
+                setEditId(null);
+                setIsModalOpen(false);
+                setError(null);
+            } catch (err) {
+                setError('Failed to save book: ' + (err.response?.data?.message || err.message));
+            }
+        };
+
+        const handleDelete = async (id) => {
+            try {
+                await axios.delete(`http://localhost:8080/api/books/${id}`);
+                fetchBooks();
+                setError(null);
+            } catch (err) {
+                setError('Failed to delete book: ' + (err.response?.data?.message || err.message));
+            }
+        };
+
+        const handleEdit = (book) => {
+            setEditId(book.id);
+            setForm({
+                title: book.title,
+                isbn: book.isbn,
+                price: book.price,
+                publicationDate: book.publicationDate,
+                authorId: book.author.id
+            });
+            setIsModalOpen(true);
+        };
+
+        const openAddModal = () => {
+            setEditId(null);
+            setForm({ title: '', isbn: '', price: '', publicationDate: '', authorId: '' });
+            setIsModalOpen(true);
+        };
+
+        const closeModal = () => {
+            setIsModalOpen(false);
+            setEditId(null);
+            setForm({ title: '', isbn: '', price: '', publicationDate: '', authorId: '' });
+            setError(null);
+        };
+
+        return (
+            <div className="container mx-auto p-4">
+                <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">Book Management</h1>
+
+                {error && (
+                    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                        {error}
+                    </div>
+                )}
+
+                <button
+                    onClick={openAddModal}
+                    className="mb-6 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded"
+                >
+                    Add New Book
+                </button>
+
+                <div className="bg-white shadow-md rounded-lg overflow-hidden">
+                    <table className="min-w-full">
+                        <thead className="bg-gray-200">
+                            <tr>
+                                <th className="py-2 px-4 text-left">Title</th>
+                                <th className="py-2 px-4 text-left">ISBN</th>
+                                <th className="py-2 px-4 text-left">Price</th>
+                                <th className="py-2 px-4 text-left">Publication Date</th>
+                                <th className="py-2 px-4 text-left">Author ID</th>
+                                <th className="py-2 px-4 text-left">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {books.length === 0 ? (
+                                <tr>
+                                    <td colSpan="6" className="py-4 px-4 text-center text-gray-500">
+                                        No books found
+                                    </td>
+                                </tr>
+                            ) : (
+                                books.map(book => (
+                                    <tr key={book.id} className="border-t">
+                                        <td className="py-2 px-4">{book.title}</td>
+                                        <td className="py-2 px-4">{book.isbn}</td>
+                                        <td className="py-2 px-4">${book.price}</td>
+                                        <td className="py-2 px-4">{book.publicationDate}</td>
+                                        <td className="py-2 px-4">{book.author.id}</td>
+                                        <td className="py-2 px-4">
+                                            <button
+                                                onClick={() => handleEdit(book)}
+                                                className="bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-2 rounded mr-2"
+                                            >
+                                                Edit
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(book.id)}
+                                                className="bg-red-500 hover:bg-red-600 text-white py-1 px-2 rounded"
+                                            >
+                                                Delete
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+
+                {isModalOpen && (
+                    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center">
+                        <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+                            <h2 className="text-xl font-semibold mb-4">{editId ? 'Edit Book' : 'Add Book'}</h2>
+                            <form onSubmit={handleSubmit}>
+                                <div className="mb-4">
+                                    <label className="block text-gray-700">Title</label>
+                                    <input
+                                        name="title"
+                                        value={form.title}
+                                        onChange={handleChange}
+                                        className="w-full border rounded py-2 px-3"
+                                        placeholder="Enter title"
+                                        required
+                                    />
+                                </div>
+                                <div className="mb-4">
+                                    <label className="block text-gray-700">ISBN</label>
+                                    <input
+                                        name="isbn"
+                                        value={form.isbn}
+                                        onChange={handleChange}
+                                        className="w-full border rounded py-2 px-3"
+                                        placeholder="Enter 13-digit ISBN"
+                                        required
+                                    />
+                                </div>
+                                <div className="mb-4">
+                                    <label className="block text-gray-700">Price</label>
+                                    <input
+                                        name="price"
+                                        type="number"
+                                        step="0.01"
+                                        value={form.price}
+                                        onChange={handleChange}
+                                        className="w-full border rounded py-2 px-3"
+                                        placeholder="Enter price"
+                                        required
+                                    />
+                                </div>
+                                <div className="mb-4">
+                                    <label className="block text-gray-700">Publication Date</label>
+                                    <input
+                                        name="publicationDate"
+                                        type="date"
+                                        value={form.publicationDate}
+                                        onChange={handleChange}
+                                        className="w-full border rounded py-2 px-3"
+                                        required
+                                    />
+                                </div>
+                                <div className="mb-4">
+                                    <label className="block text-gray-700">Author ID</label>
+                                    <input
+                                        name="authorId"
+                                        type="number"
+                                        value={form.authorId}
+                                        onChange={handleChange}
+                                        className="w-full border rounded py-2 px-3"
+                                        placeholder="Enter author ID"
+                                        required
+                                    />
+                                </div>
+                                <div className="flex justify-end">
+                                    <button
+                                        type="button"
+                                        onClick={closeModal}
+                                        className="bg-gray-500 hover:bg-gray-600 text-white py-2 px-4 rounded mr-2"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
+                                    >
+                                        {editId ? 'Update Book' : 'Add Book'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    ReactDOM.render(<BookApp />, document.getElementById('root'));
+</script>
+</body>
+</html>
